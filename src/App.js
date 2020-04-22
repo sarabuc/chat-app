@@ -6,23 +6,20 @@ import msgService from './msgs';
 const io = require('socket.io-client');
 
 const socket = io.connect('http://localhost:3001');
-console.log(socket)
 
 const App=()=> {
 
   const [msgs, setMsgs] = useState([]) 
   const [newMsg, setNewMsg] = useState('') 
   
-
   useEffect(() => {
+    
     msgService
       .getAll()
       .then(initial => {
         console.log(initial)
         setMsgs(msgs.concat(initial))
-        console.log('HHHHHEEEEEEEEEEEEEERRRRRRRRRRRREEEEEEEEE')
       })
-      
   }, [])
   socket.on('connect', () =>{
     console.log("connect socket")
@@ -31,9 +28,7 @@ const App=()=> {
       console.log('message', msg)
     })
     socket.on('newChat', (newOb) => {
-      console.log(msgs, newOb)
       setMsgs(msgs.concat(newOb))
-      console.log('99999999999999999999999999999999RRRRREEEEEEEEE')
 
     })
 
@@ -51,7 +46,6 @@ const App=()=> {
     msgService
       .create(msgObject)
       .then(data => {
-        console.log(data)
         setNewMsg('')
       })
   }

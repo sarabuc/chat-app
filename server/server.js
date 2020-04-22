@@ -1,81 +1,75 @@
-require('dotenv').config()
-const cors = require('cors');
-const bodyParser = require('body-parser')
-
-
-const Chat = require('./mongo')
-
 var express = require('express');
+var bodyParser = require('body-parser')
 var app = express();
-var server = require('http').createServer(app);
-var io = require('socket.io')(server);
-
-// const app = require('express')();
-// const server = require('http').Server(app)
-// const io = require('socket.io')(server);
-
-// const socket = require('socket.io')
-// const http = require('http')
-// const express = require('express')
-// const app = express();  
-// const server = new http.Server(app);  
-// const io = socket(server);
-
+var http = require('http').Server(app);
+var io = require('socket.io')(http);
+var mongoose = require('mongoose');
+const cors = require('cors')
 app.use(cors())
-app.use(bodyParser.json())
+app.use(express.static(__dirname));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({extended: false}))
 
-app.get('/', (req, res) => {
-  res.send('<h1>Hello World!</h1>')
+var Message = mongoose.model('Message',{
+  userName : String,
+  msg : String,
+  date: Date
 })
 
-app.get('/api/chat', async (req, res) => {
-    const chatList =  await Chat.find()
-    .sort({ date: -1 })
-    .limit(4);
-return res.json({ chat: chatList });
-})
-// io.on('connection', (socket) => {
-//   console.log('a user connected!!!!!!!!!!!!!!!!!!');
-// })
+var dbUrl = 'mongodb+srv://erenraich:312547870@serve-pro-e5uez.mongodb.net/test?retryWrites=true&w=majority'
 
-app.post('/api/chat', async(req,res) => {
-
-    console.log("here")
-    const body = req.body
-
-    if (!body.msg) {
-      return res.status(400).json({ 
-        error: 'content missing' 
-      })
-    }
-    const chat = new Chat({
-      msg: body.msg,
-      userName: body.username || "no user",
-      date: new Date(),
-      //id: generateId(),
-    })
-    console.log(chat)
-
-    const res2 = await chat.save()
-      console.log('chat saved!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
-    return res.json(res2)
+app.get('/api/chat',  (req, res) => {
+   Message.find({}).sort({date:-1}).limit(4).then(( messages)=> {
+     console.log(messages)
+    res.send(messages);
+  })
 })
 
 
-
-
-io.of("/").on("connection", (socket) => {  
-  console.lo("A user has connected to the socket!");
-  socket.on('disconnect', () => console.log('A user has disconnected from the socket!'));
-});
-
-const PORT = 3001
-server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
+app.get('/messages/:user', (req, res) => {
+  var user = req.params.user
+  Message.find({name: user},(err, messages)=> {
+    res.send(messages);
+  })
 })
 
 
-io.on('connection', function(client) {
-  // var address = io.handshake.address;
-   console.log('Ein neuer Client hat sich zum Chat verbunden! IP: ')
+app.post('/api/chat', async (req, res) => {
+  try{
+    var message = new Message(req.body);
+    message['date'] = new Date()
+    message['userName'] = req.body.userName || 'sara'
+    const savedMessage = await message.save()
+      console.log('saved');
+
+    // var censored = await Message.findOne({message:'badword'});
+    //   if(censored)
+    //     await Message.remove({_id: censored.id})
+    //   else
+        io.emit('newChat', savedMessage);
+      res.sendStatus(200)//json(savedMessage);
+  }
+  catch (error){
+    res.sendStatus(500);
+    return console.log('error',error);
+  }
+  finally{
+    console.log('Message Posted')
+  }
+
+})
+
+
+
+io.on('connection', () =>{
+  console.log('a user is connected')
+  io.emit('message', {msg:'from server'})
+})
+
+mongoose.connect(dbUrl ,{useCreateIndex : true} ,(err) => {
+  console.log('mongodb connected',err);
+})
+
+var server = http.listen(3001, () => {
+  console.log('server is running on port', server.address().port);
 });
