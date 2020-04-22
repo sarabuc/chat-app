@@ -1,0 +1,94 @@
+import React, { useState, useEffect } from 'react';
+import logo from './logo.svg';
+import './App.css';
+import List from './components/list';
+import msgService from './msgs';
+const io = require('socket.io-client');
+
+const socket = io.connect('http://localhost:3001');
+console.log(socket)
+socket.on('connect', () => {
+  console.log("connect socket")
+})
+socket.on('message', (msg) => {
+  console.log('message', msg)
+})
+class App extends React.Component {
+  //instead of useState
+  constructor() {
+    super()
+    this.state = {
+      msgs: [],
+      newMsg: ''
+    }
+    msgService
+      .getAll()
+      .then(initial => {
+        console.log(initial)
+        this.setState({ msgs: this.state.msgs.concat(initial) })
+        console.log('HHHHHEEEEEEEEEEEEEERRRRRRRRRRRREEEEEEEEE')
+      })
+    socket.on('newChat', (newOb) => {
+      console.log(this.state.msgs, newOb)
+      this.setState({ msgs: this.state.msgs.concat(newOb) })
+      console.log('99999999999999999999999999999999RRRRREEEEEEEEE')
+
+    })
+this.handleMsgChange = this.handleMsgChange.bind(this)
+this.addMsg = this.addMsg.bind(this)
+  }
+  // const [msgs, setMsgs] = useState([]) 
+  // const [newMsg, setNewMsg] = useState('') 
+
+
+  // useEffect(() => {
+
+
+  // }, [])
+
+
+  handleMsgChange = (event) => {
+    this.setState({ newMsg: event.target.value })
+  }
+
+  addMsg = (event) => {
+    event.preventDefault()
+    const msgObject = {
+      msg: this.state.newMsg,
+      username: "sara"
+    }
+
+    msgService
+      .create(msgObject)
+      .then(data => {
+        console.log(data)
+        this.setState({ newMsg: '' })
+      })
+  }
+
+
+
+  render() {
+
+    return (
+      <div className="App">
+        <header className="App-header">
+          <img src={logo} className="App-logo" alt="logo" />
+          <div>
+            <List list={this.state.msgs} />
+            <form onSubmit={this.addMsg}>
+              <input
+                value={this.state.newMsg}
+                onChange={this.handleMsgChange}
+              />
+              <button type="submit">save</button>
+            </form>
+          </div>
+        </header>
+
+      </div>
+    );
+  }
+}
+
+export default App;
